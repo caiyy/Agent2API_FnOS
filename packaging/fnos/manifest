@@ -1,0 +1,14 @@
+appname         = agent2api
+version         = __VERSION__
+display_name    = Agent2API
+platform        = __PLATFORM__
+maintainer      = aimod-cc
+maintainer_url  = https://github.com/aimod-cc/Agent2API
+distributor     = agent2api-fnos
+distributor_url = https://github.com/caiyy/Agent2API_FnOS
+desktop_uidir   = ui
+desktop_applaunchname = agent2api.Application
+service_port    = 3065
+desc            = AI 路由网关与 Agent 客户端接管。统一模型接口、账号路由、网关密钥和请求报表，数据保存在飞牛应用私有目录。
+source          = thirdparty
+checksum        = __CHECKSUM__

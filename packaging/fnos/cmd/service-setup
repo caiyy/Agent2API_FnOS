@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# fnOS supplies lifecycle scripts with a minimal TRIM_* environment and no
+# exported PATH. Set a known system path before launching the gateway.
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+APP_DIR="${TRIM_APPDEST}"
+DATA_DIR="${TRIM_PKGVAR}"
+ENV_FILE="${DATA_DIR}/agent2api.env"
+ENV_EXAMPLE="${APP_DIR}/config/agent2api.env.example"
+
+mkdir -p "${DATA_DIR}/logs"
+
+# Seed an editable configuration file on first start. Keep existing user data
+# untouched on restart and upgrade.
+if [ ! -e "${ENV_FILE}" ] && [ -r "${ENV_EXAMPLE}" ]; then
+    cp -p "${ENV_EXAMPLE}" "${ENV_FILE}" 2>/dev/null || true
+fi
+if [ -r "${ENV_FILE}" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    . "${ENV_FILE}"
+    set +a
+fi
+
+# The manifest and firewall rule declare 3065. TRIM_SERVICE_PORT is the
+# authoritative value when fnOS reallocates a port during installation.
+export AGENT2API_HOST="${AGENT2API_HOST:-0.0.0.0}"
+export AGENT2API_PROXY_PORT="${TRIM_SERVICE_PORT:-3065}"
+export AGENT2API_PROXY_HOME="${DATA_DIR}"
+export AGENT2API_UI_DIR="${APP_DIR}/ui"
+export AGENT2API_LOG_FILE="${DATA_DIR}/logs/server.log"
+export AGENT2API_CAPTCHA_ENABLED="${AGENT2API_CAPTCHA_ENABLED:-1}"
+
+# fnOS owns package files. Upgrades must go through Application Center.
+export AGENT2API_SELF_UPDATE=0
+export AGENT2API_SYSTEMD_UPDATE=0
+
+SERVICE_BINARY="${APP_DIR}/bin/agent2api-server"
+SERVICE_COMMAND="${SERVICE_BINARY}"
+SVC_CWD="${DATA_DIR}"
+SVC_BACKGROUND=y
+SVC_WRITE_PID=y
+SVC_QUIET=y
+SVC_WAIT_TIMEOUT=30
+
+service_prestart() {
+    mkdir -p "${DATA_DIR}/logs"
+}
+
+service_poststop() {
+    # PID handling in common already sends TERM then KILL. This sweep only
+    # handles a process that lost its PID file before it could be recorded.
+    pkill -f "^${SERVICE_BINARY}($| )" 2>/dev/null || true # pkill-f-ok: anchored to the installed binary
+}

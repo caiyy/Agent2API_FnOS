@@ -1,0 +1,5 @@
+#!/bin/bash
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=./installer
+. "${SCRIPT_DIR}/installer" config_init

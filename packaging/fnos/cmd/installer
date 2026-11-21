@@ -1,0 +1,10 @@
+#!/bin/bash
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=./common
+. "${SCRIPT_DIR}/common"
+# shellcheck source=./service-setup
+. "${SCRIPT_DIR}/service-setup"
+
+: > "${LOG_FILE}"
+"$@"

@@ -1,0 +1,36 @@
+#!/bin/bash
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=./common
+. "${SCRIPT_DIR}/common"
+# shellcheck source=./service-setup
+. "${SCRIPT_DIR}/service-setup"
+
+case "${1:-}" in
+    start)
+        if daemon_status; then
+            exit 0
+        fi
+        start_daemon
+        ;;
+    stop)
+        stop_daemon
+        ;;
+    status)
+        if daemon_status; then
+            echo "Agent2API is running"
+            exit 0
+        fi
+        echo "Agent2API is not running"
+        exit 3
+        ;;
+    log)
+        lines="${2:-100}"
+        [ -f "${AGENT2API_LOG_FILE:-${LOG_FILE}}" ] && \
+            tail -n "${lines}" "${AGENT2API_LOG_FILE:-${LOG_FILE}}" || \
+            tail -n "${lines}" "${LOG_FILE}"
+        ;;
+    *)
+        exit 1
+        ;;
+esac
