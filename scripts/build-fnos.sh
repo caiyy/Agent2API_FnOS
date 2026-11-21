@@ -219,6 +219,7 @@ EOF
     cp -p "${PACKAGE_DIR}/health.json" "${work}/package/health.json"
     cp -p "${PACKAGE_DIR}/ICON.PNG" "${work}/package/ICON.PNG"
     cp -p "${PACKAGE_DIR}/ICON_256.PNG" "${work}/package/ICON_256.PNG"
+    cp -p "${PACKAGE_DIR}/ICON_256.PNG" "${work}/package/ui/images/256.png"
 
     sed \
         -e "s|__VERSION__|${VERSION}|g" \

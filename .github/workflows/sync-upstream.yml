@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: "17 */6 * * *"
   workflow_dispatch:
+    inputs:
+      force:
+        description: Rebuild and replace assets for an existing fnOS release
+        required: false
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -40,8 +46,10 @@ jobs:
         shell: bash
         env:
           RELEASE_TAG: fnos-${{ steps.upstream.outputs.tag }}
+          FORCE_REBUILD: ${{ inputs.force }}
         run: |
-          if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+          if [ "${FORCE_REBUILD}" != "true" ] && \
+             gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
             echo "skip=true" >> "${GITHUB_OUTPUT}"
             echo "Already published: ${RELEASE_TAG}"
           else
@@ -117,8 +125,14 @@ jobs:
           if [ "${UPSTREAM_CHANNEL}" = "beta" ]; then
             args+=(--prerelease)
           fi
-          gh release create "${RELEASE_TAG}" \
-            "dist/agent2api_${VERSION}_x86.fpk" \
-            "dist/agent2api_${VERSION}_arm.fpk" \
-            dist/SHA256SUMS \
-            "${args[@]}"
+          assets=(
+            "dist/agent2api_${VERSION}_x86.fpk"
+            "dist/agent2api_${VERSION}_arm.fpk"
+            dist/SHA256SUMS
+          )
+          if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${RELEASE_TAG}" "${assets[@]}" --clobber
+            gh release edit "${RELEASE_TAG}" "${args[@]}"
+          else
+            gh release create "${RELEASE_TAG}" "${assets[@]}" "${args[@]}"
+          fi
