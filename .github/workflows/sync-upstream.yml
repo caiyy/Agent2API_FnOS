@@ -10,6 +10,10 @@ on:
         required: false
         type: boolean
         default: false
+      package_version:
+        description: Optional fnOS package version override, for example 3.5.0-beta.6.1
+        required: false
+        type: string
   push:
     branches: [main]
     paths:
@@ -41,11 +45,27 @@ jobs:
         shell: bash
         run: ./scripts/resolve-upstream-release.sh
 
+      - name: Resolve package version
+        id: package
+        shell: bash
+        env:
+          UPSTREAM_VERSION: ${{ steps.upstream.outputs.version }}
+          INPUT_PACKAGE_VERSION: ${{ inputs.package_version }}
+        run: |
+          package_version="${INPUT_PACKAGE_VERSION:-${UPSTREAM_VERSION}}"
+          case "${package_version}" in
+            ''|*[!0-9A-Za-z.+-]*)
+              echo "Invalid package version: ${package_version}" >&2
+              exit 1
+              ;;
+          esac
+          echo "version=${package_version}" >> "${GITHUB_OUTPUT}"
+
       - name: Check existing fnOS release
         id: existing
         shell: bash
         env:
-          RELEASE_TAG: fnos-${{ steps.upstream.outputs.tag }}
+          RELEASE_TAG: fnos-v${{ steps.package.outputs.version }}
           FORCE_REBUILD: ${{ inputs.force }}
         run: |
           if [ "${FORCE_REBUILD}" != "true" ] && \
@@ -60,39 +80,43 @@ jobs:
         if: steps.existing.outputs.skip != 'true'
         shell: bash
         env:
-          VERSION: ${{ steps.upstream.outputs.version }}
-        run: ./scripts/build-fnos.sh --arch all --version "${VERSION}"
+          UPSTREAM_VERSION: ${{ steps.upstream.outputs.version }}
+          PACKAGE_VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          ./scripts/build-fnos.sh --arch all \
+            --upstream-version "${UPSTREAM_VERSION}" \
+            --package-version "${PACKAGE_VERSION}"
 
       - name: Verify packages
         if: steps.existing.outputs.skip != 'true'
         shell: bash
         env:
-          VERSION: ${{ steps.upstream.outputs.version }}
+          PACKAGE_VERSION: ${{ steps.package.outputs.version }}
         run: |
-          ./scripts/verify-fnos.sh "dist/agent2api_${VERSION}_x86.fpk"
-          ./scripts/verify-fnos.sh "dist/agent2api_${VERSION}_arm.fpk"
+          ./scripts/verify-fnos.sh "dist/agent2api_${PACKAGE_VERSION}_x86.fpk"
+          ./scripts/verify-fnos.sh "dist/agent2api_${PACKAGE_VERSION}_arm.fpk"
 
       - name: Test x86 lifecycle
         if: steps.existing.outputs.skip != 'true'
         shell: bash
         env:
-          VERSION: ${{ steps.upstream.outputs.version }}
-        run: ./scripts/test-fnos-runtime.sh "dist/agent2api_${VERSION}_x86.fpk"
+          PACKAGE_VERSION: ${{ steps.package.outputs.version }}
+        run: ./scripts/test-fnos-runtime.sh "dist/agent2api_${PACKAGE_VERSION}_x86.fpk"
 
       - name: Create checksums
         if: steps.existing.outputs.skip != 'true'
         shell: bash
         env:
-          VERSION: ${{ steps.upstream.outputs.version }}
+          PACKAGE_VERSION: ${{ steps.package.outputs.version }}
         run: |
           cd dist
-          sha256sum "agent2api_${VERSION}_x86.fpk" "agent2api_${VERSION}_arm.fpk" > SHA256SUMS
+          sha256sum "agent2api_${PACKAGE_VERSION}_x86.fpk" "agent2api_${PACKAGE_VERSION}_arm.fpk" > SHA256SUMS
 
       - name: Upload workflow artifacts
         if: steps.existing.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: agent2api-fnos-${{ steps.upstream.outputs.version }}
+          name: agent2api-fnos-${{ steps.package.outputs.version }}
           path: |
             dist/agent2api_*.fpk
             dist/SHA256SUMS
@@ -102,32 +126,35 @@ jobs:
         if: steps.existing.outputs.skip != 'true'
         shell: bash
         env:
-          VERSION: ${{ steps.upstream.outputs.version }}
+          UPSTREAM_VERSION: ${{ steps.upstream.outputs.version }}
+          PACKAGE_VERSION: ${{ steps.package.outputs.version }}
           UPSTREAM_TAG: ${{ steps.upstream.outputs.tag }}
           RELEASE_URL: ${{ steps.upstream.outputs.release_url }}
-          RELEASE_TAG: fnos-${{ steps.upstream.outputs.tag }}
+          RELEASE_TAG: fnos-v${{ steps.package.outputs.version }}
         run: |
           notes="${RUNNER_TEMP}/fnos-release-notes.md"
           {
             printf '## 核心更新\n\n'
-            printf '1. 新增：Agent2API `%s` 的飞牛 OS 原生安装包。\n' "${VERSION}"
-            printf '2. 优化：提供 x86 与 ARM 双架构，使用上游官方 Linux 服务端二进制并校验 SHA-256。\n\n'
+            printf '1. 新增：Agent2API 飞牛 OS 安装包 `%s`。\n' "${PACKAGE_VERSION}"
+            printf '2. 优化：补齐飞牛桌面入口所需的 64 与 256 像素图标。\n'
+            printf '3. 优化：提供 x86 与 ARM 双架构，使用上游官方 Linux 服务端二进制并校验 SHA-256。\n\n'
             printf '## 其他更新\n\n'
             printf '1. 更新：上游版本 `%s`。\n' "${UPSTREAM_TAG}"
-            printf '2. 更新：安装包由独立 fnOS 打包仓库自动构建发布。\n\n' 
+            printf '2. 更新：飞牛包版本 `%s`。\n' "${PACKAGE_VERSION}"
+            printf '3. 更新：安装包由独立 fnOS 打包仓库自动构建发布。\n\n' 
             printf '上游发布：%s\n\n' "${RELEASE_URL}"
             printf '安装包与 `SHA256SUMS` 见本 Release 附件。\n'
           } > "${notes}"
           args=(
-            --title "Agent2API ${VERSION} for fnOS"
+            --title "Agent2API ${PACKAGE_VERSION} for fnOS"
             --notes-file "${notes}"
           )
           if [ "${UPSTREAM_CHANNEL}" = "beta" ]; then
             args+=(--prerelease)
           fi
           assets=(
-            "dist/agent2api_${VERSION}_x86.fpk"
-            "dist/agent2api_${VERSION}_arm.fpk"
+            "dist/agent2api_${PACKAGE_VERSION}_x86.fpk"
+            "dist/agent2api_${PACKAGE_VERSION}_arm.fpk"
             dist/SHA256SUMS
           )
           if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then

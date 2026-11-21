@@ -34,6 +34,17 @@
 ./scripts/build-fnos.sh --arch all --version 3.5.0-beta.6
 ```
 
+需要在不改变上游版本的情况下发布飞牛热修复包时，分别指定两个版本：
+
+```bash
+./scripts/build-fnos.sh \
+  --upstream-version 3.5.0-beta.6 \
+  --package-version 3.5.0-beta.6.1
+```
+
+手动触发工作流时也可以填写 `package_version`。这样 FPK 的版本号会递增，
+应用中心可以覆盖安装，但二进制仍来自指定的上游 Release。
+
 使用 Docker 跑完整生命周期：
 
 ```bash

@@ -6,7 +6,8 @@ PACKAGE_DIR="${ROOT}/packaging/fnos"
 DIST_DIR="${ROOT}/dist"
 CACHE_DIR="${DIST_DIR}/cache"
 ARCH="all"
-VERSION="${VERSION:-}"
+UPSTREAM_VERSION="${UPSTREAM_VERSION:-}"
+PACKAGE_VERSION="${PACKAGE_VERSION:-}"
 UPSTREAM_REPO="${UPSTREAM_REPO:-aimod-cc/Agent2API}"
 PACKAGING_REPO="${PACKAGING_REPO:-https://github.com/caiyy/Agent2API_FnOS}"
 WORK_DIRS=()
@@ -24,11 +25,13 @@ trap cleanup EXIT
 
 usage() {
     printf '%s\n' \
-        "Usage: $0 [--arch x86|arm|all] [--version <upstream-version>] [--cache-dir <path>]" \
+        "Usage: $0 [--arch x86|arm|all] [--upstream-version <version>]" \
+        "          [--package-version <version>] [--cache-dir <path>]" \
         "" \
         "Defaults:" \
         "  --arch all" \
-        "  --version from UPSTREAM_VERSION" \
+        "  --upstream-version from UPSTREAM_VERSION" \
+        "  --package-version same as upstream version" \
         "  --cache-dir dist/cache"
 }
 
@@ -39,7 +42,16 @@ while [ "$#" -gt 0 ]; do
             shift 2
             ;;
         --version)
-            VERSION="${2:-}"
+            UPSTREAM_VERSION="${2:-}"
+            PACKAGE_VERSION="${PACKAGE_VERSION:-$UPSTREAM_VERSION}"
+            shift 2
+            ;;
+        --upstream-version)
+            UPSTREAM_VERSION="${2:-}"
+            shift 2
+            ;;
+        --package-version)
+            PACKAGE_VERSION="${2:-}"
             shift 2
             ;;
         --cache-dir)
@@ -66,20 +78,29 @@ case "${ARCH}" in
         ;;
 esac
 
-if [ -z "${VERSION}" ]; then
+if [ -z "${UPSTREAM_VERSION}" ]; then
     if [ -f "${ROOT}/UPSTREAM_VERSION" ]; then
-        VERSION="$(tr -d '[:space:]' < "${ROOT}/UPSTREAM_VERSION")"
+        UPSTREAM_VERSION="$(tr -d '[:space:]' < "${ROOT}/UPSTREAM_VERSION")"
     elif [ -f "${ROOT}/package.json" ]; then
-        VERSION="$(sed -n 's/^[[:space:]]*"version": "\([^"]*\)".*/\1/p' "${ROOT}/package.json" | head -1)"
+        UPSTREAM_VERSION="$(sed -n 's/^[[:space:]]*"version": "\([^"]*\)".*/\1/p' "${ROOT}/package.json" | head -1)"
     fi
 fi
-if [ -z "${VERSION}" ]; then
-    printf 'Unable to determine version; pass --version\n' >&2
+if [ -z "${UPSTREAM_VERSION}" ]; then
+    printf 'Unable to determine upstream version; pass --upstream-version\n' >&2
     exit 1
 fi
-case "${VERSION}" in
+if [ -z "${PACKAGE_VERSION}" ]; then
+    PACKAGE_VERSION="${UPSTREAM_VERSION}"
+fi
+case "${UPSTREAM_VERSION}" in
     ''|*[!0-9A-Za-z.+-]*)
-        printf 'Invalid version: %s\n' "${VERSION}" >&2
+        printf 'Invalid upstream version: %s\n' "${UPSTREAM_VERSION}" >&2
+        exit 1
+        ;;
+esac
+case "${PACKAGE_VERSION}" in
+    ''|*[!0-9A-Za-z.+-]*)
+        printf 'Invalid package version: %s\n' "${PACKAGE_VERSION}" >&2
         exit 1
         ;;
 esac
@@ -119,7 +140,7 @@ download_release() {
     local asset="$1"
     local destination="${CACHE_DIR}/${asset}"
     local checksum_file="${destination}.sha256"
-    local url="https://github.com/${UPSTREAM_REPO}/releases/download/v${VERSION}/${asset}"
+    local url="https://github.com/${UPSTREAM_REPO}/releases/download/v${UPSTREAM_VERSION}/${asset}"
 
     if [ -f "${destination}" ] && [ -f "${checksum_file}" ]; then
         local expected actual
@@ -191,9 +212,10 @@ build_one() {
     cat > "${work}/app/SOURCE.txt" <<EOF
 Agent2API server binary and web UI are unmodified upstream artifacts.
 
-Version: ${VERSION}
-Release: https://github.com/${UPSTREAM_REPO}/releases/tag/v${VERSION}
-Source:  https://github.com/${UPSTREAM_REPO}/tree/v${VERSION}
+Package version:  ${PACKAGE_VERSION}
+Upstream version: ${UPSTREAM_VERSION}
+Release: https://github.com/${UPSTREAM_REPO}/releases/tag/v${UPSTREAM_VERSION}
+Source:  https://github.com/${UPSTREAM_REPO}/tree/v${UPSTREAM_VERSION}
 License: GNU Affero General Public License v3.0 (see LICENSE)
 
 Upstream archive: ${asset}
@@ -222,14 +244,14 @@ EOF
     cp -p "${PACKAGE_DIR}/ICON_256.PNG" "${work}/package/ui/images/256.png"
 
     sed \
-        -e "s|__VERSION__|${VERSION}|g" \
+        -e "s|__VERSION__|${PACKAGE_VERSION}|g" \
         -e "s|__PLATFORM__|${platform}|g" \
         -e "s|__CHECKSUM__|${checksum}|g" \
         "${PACKAGE_DIR}/manifest" > "${work}/package/manifest"
 
     chmod 0755 "${work}/package/cmd/"*
     mkdir -p "${DIST_DIR}"
-    local output="${DIST_DIR}/agent2api_${VERSION}_${platform}.fpk"
+    local output="${DIST_DIR}/agent2api_${PACKAGE_VERSION}_${platform}.fpk"
     (
         cd "${work}/package"
         tar -czf "${output}" \
