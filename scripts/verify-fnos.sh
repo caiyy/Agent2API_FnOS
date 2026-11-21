@@ -119,20 +119,24 @@ tar -xzf "${WORK}/app.tgz" -C "${WORK}/app"
     printf 'FAIL: missing upstream license\n' >&2
     exit 1
 }
-[ -f "${WORK}/ui/images/64.png" ] || {
-    printf 'FAIL: missing desktop icon ui/images/64.png\n' >&2
+[ -f "${WORK}/ui/images/icon-64.png" ] || {
+    printf 'FAIL: missing desktop icon ui/images/icon-64.png\n' >&2
     exit 1
 }
-[ -f "${WORK}/ui/images/256.png" ] || {
-    printf 'FAIL: missing desktop icon ui/images/256.png\n' >&2
+[ -f "${WORK}/ui/images/icon-256.png" ] || {
+    printf 'FAIL: missing desktop icon ui/images/icon-256.png\n' >&2
     exit 1
 }
-file -b "${WORK}/ui/images/64.png" | grep -q '64 x 64' || {
-    printf 'FAIL: ui/images/64.png is not 64x64\n' >&2
+file -b "${WORK}/ui/images/icon-64.png" | grep -q '64 x 64' || {
+    printf 'FAIL: ui/images/icon-64.png is not 64x64\n' >&2
     exit 1
 }
-file -b "${WORK}/ui/images/256.png" | grep -q '256 x 256' || {
-    printf 'FAIL: ui/images/256.png is not 256x256\n' >&2
+file -b "${WORK}/ui/images/icon-256.png" | grep -q '256 x 256' || {
+    printf 'FAIL: ui/images/icon-256.png is not 256x256\n' >&2
+    exit 1
+}
+file -b "${WORK}/ICON.PNG" | grep -q '64 x 64' || {
+    printf 'FAIL: ICON.PNG is not 64x64\n' >&2
     exit 1
 }
 

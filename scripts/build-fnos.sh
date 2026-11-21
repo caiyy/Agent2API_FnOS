@@ -241,6 +241,8 @@ EOF
     cp -p "${PACKAGE_DIR}/health.json" "${work}/package/health.json"
     cp -p "${PACKAGE_DIR}/ICON.PNG" "${work}/package/ICON.PNG"
     cp -p "${PACKAGE_DIR}/ICON_256.PNG" "${work}/package/ICON_256.PNG"
+    cp -p "${PACKAGE_DIR}/ui/images/64.png" "${work}/package/ui/images/icon-64.png"
+    cp -p "${PACKAGE_DIR}/ICON_256.PNG" "${work}/package/ui/images/icon-256.png"
     cp -p "${PACKAGE_DIR}/ICON_256.PNG" "${work}/package/ui/images/256.png"
 
     sed \
