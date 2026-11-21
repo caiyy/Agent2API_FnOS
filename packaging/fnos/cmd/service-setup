@@ -49,7 +49,5 @@ service_prestart() {
 }
 
 service_poststop() {
-    # PID handling in common already sends TERM then KILL. This sweep only
-    # handles a process that lost its PID file before it could be recorded.
-    pkill -f "^${SERVICE_BINARY}($| )" 2>/dev/null || true # pkill-f-ok: anchored to the installed binary
+    cleanup_service_processes
 }

@@ -54,7 +54,19 @@ call_hook() {
     fi
 }
 
-service_pid_alive() {
+service_process_pids() {
+    local pid
+    for proc in /proc/[0-9]*; do
+        [ -d "${proc}" ] || continue
+        pid="${proc##*/}"
+        [ "${pid}" = "$$" ] && continue
+        if service_pid_is_live "${pid}" && service_pid_matches_binary "${pid}"; then
+            printf '%s\n' "${pid}"
+        fi
+    done
+}
+
+service_pid_is_live() {
     local pid="$1"
     kill -0 "${pid}" >/dev/null 2>&1 || return 1
     if [ -r "/proc/${pid}/stat" ]; then
@@ -62,31 +74,75 @@ service_pid_alive() {
         state="$(sed -nE 's/^[0-9]+ \(.*\) ([A-Z]).*/\1/p' "/proc/${pid}/stat")"
         [ "${state}" != "Z" ] || return 1
     fi
-    if [ -n "${SERVICE_BINARY:-}" ] && [ -r "/proc/${pid}/exe" ]; then
-        local actual expected
+    return 0
+}
+
+service_pid_matches_binary() {
+    local pid="$1"
+    [ -n "${SERVICE_BINARY:-}" ] || return 0
+    local actual expected arg count=0
+    expected="$(readlink -f "${SERVICE_BINARY}" 2>/dev/null || printf '%s' "${SERVICE_BINARY}")"
+    [ -n "${expected}" ] || return 0
+
+    if [ -r "/proc/${pid}/exe" ]; then
         actual="$(readlink -f "/proc/${pid}/exe" 2>/dev/null || true)"
-        expected="$(readlink -f "${SERVICE_BINARY}" 2>/dev/null || true)"
-        if [ -n "${actual}" ] && [ -n "${expected}" ] && [ "${actual}" != "${expected}" ]; then
-            return 1
-        fi
+        actual="${actual% (deleted)}"
+        [ -n "${actual}" ] && [ "${actual}" = "${expected}" ] && return 0
     fi
+
+    # QEMU cross-architecture containers expose the emulator through /proc/exe;
+    # the emulated binary remains visible in the first few command-line args.
+    if [ -r "/proc/${pid}/cmdline" ]; then
+        while IFS= read -r -d '' arg; do
+            count=$((count + 1))
+            [ "${count}" -le 3 ] || break
+            case "${arg}" in
+                /*)
+                    actual="$(readlink -f "${arg}" 2>/dev/null || true)"
+                    [ "${actual}" = "${expected}" ] && return 0
+                    ;;
+            esac
+        done < "/proc/${pid}/cmdline"
+    fi
+    return 1
+}
+
+service_pid_alive() {
+    local pid="$1"
+    service_pid_is_live "${pid}" || return 1
+    service_pid_matches_binary "${pid}" || return 1
     return 0
 }
 
 daemon_status() {
     local pid_file="${1:-${PID_FILE}}"
-    local pid seen=0
-    [ -r "${pid_file}" ] || return 1
-    while IFS= read -r pid; do
-        [ -n "${pid}" ] || continue
-        seen=1
-        service_pid_alive "${pid}" || return 1
-    done < "${pid_file}"
-    [ "${seen}" -eq 1 ]
+    local pid seen=0 discovered
+    if [ -r "${pid_file}" ]; then
+        while IFS= read -r pid; do
+            [ -n "${pid}" ] || continue
+            seen=1
+            service_pid_alive "${pid}" || {
+                seen=0
+                break
+            }
+        done < "${pid_file}"
+        [ "${seen}" -eq 1 ] && return 0
+        rm -f "${pid_file}"
+    fi
+
+    discovered="$(service_process_pids)"
+    if [ -n "${discovered}" ]; then
+        printf '%s\n' "${discovered}" > "${PID_FILE}"
+        return 0
+    fi
+    return 1
 }
 
 start_daemon() {
     validate_paths || return 1
+    if daemon_status; then
+        return 0
+    fi
     [ -x "${SERVICE_BINARY}" ] || {
         echo "Agent2API: executable not found: ${SERVICE_BINARY}" >&2
         return 1
@@ -129,22 +185,40 @@ start_daemon() {
 }
 
 stop_daemon() {
-    if [ -r "${PID_FILE}" ]; then
-        local pid waited
-        while IFS= read -r pid; do
-            [ -n "${pid}" ] || continue
-            service_pid_alive "${pid}" || continue
-            kill -TERM "${pid}" 2>/dev/null || true
-            waited=0
-            while [ "${waited}" -lt "${SVC_WAIT_TIMEOUT}" ] && service_pid_alive "${pid}"; do
-                sleep 1
-                waited=$((waited + 1))
-            done
-            service_pid_alive "${pid}" && kill -KILL "${pid}" 2>/dev/null || true
-        done < "${PID_FILE}"
-        rm -f "${PID_FILE}"
-    fi
+    local pid pids waited alive
+    pids="$(cat "${PID_FILE}" 2>/dev/null || true)"
+    pids="${pids}
+$(service_process_pids)"
+    for pid in ${pids}; do
+        service_pid_alive "${pid}" && kill -TERM "${pid}" 2>/dev/null || true
+    done
+    waited=0
+    while [ "${waited}" -lt "${SVC_WAIT_TIMEOUT}" ]; do
+        alive=0
+        for pid in ${pids}; do
+            service_pid_alive "${pid}" && alive=1
+        done
+        [ "${alive}" -eq 0 ] && break
+        sleep 1
+        waited=$((waited + 1))
+    done
+    for pid in ${pids}; do
+        service_pid_alive "${pid}" && kill -KILL "${pid}" 2>/dev/null || true
+    done
+    rm -f "${PID_FILE}"
     call_hook service_poststop
+}
+
+cleanup_service_processes() {
+    local pid
+    for pid in $(service_process_pids); do
+        service_pid_alive "${pid}" && kill -TERM "${pid}" 2>/dev/null || true
+    done
+    sleep 1
+    for pid in $(service_process_pids); do
+        service_pid_alive "${pid}" && kill -KILL "${pid}" 2>/dev/null || true
+    done
+    rm -f "${PID_FILE}"
 }
 
 install_init() {

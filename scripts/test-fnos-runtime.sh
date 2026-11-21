@@ -102,7 +102,22 @@ fi
 run_command /pkgcmd/main start
 wait_for_health "first start"
 run_command /pkgcmd/main status
+rm -f "${WORK}/data/agent2api.pid"
+run_command /pkgcmd/main status
+[ -s "${WORK}/data/agent2api.pid" ] || {
+    printf 'Status did not recover PID tracking for the running process\n' >&2
+    exit 1
+}
+run_command /pkgcmd/main start
+wait_for_health "start with missing PID file"
+rm -f "${WORK}/data/agent2api.pid"
 run_command /pkgcmd/main stop
+if curl -fsS --max-time 2 "http://127.0.0.1:${HOST_PORT}/health" >/dev/null 2>&1; then
+    printf 'Service remained reachable after stop without a PID file\n' >&2
+    exit 1
+fi
+run_command /pkgcmd/main start
+wait_for_health "restart after orphan cleanup"
 
 run_command /pkgcmd/upgrade_init
 run_command /pkgcmd/upgrade_callback
