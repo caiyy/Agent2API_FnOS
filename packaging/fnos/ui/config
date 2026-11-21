@@ -3,7 +3,7 @@
         "agent2api.Application": {
             "title": "Agent2API",
             "desc": "AI 路由网关、账号管理与请求报表",
-            "icon": "images/icon-{0}.png",
+            "icon": "images/icon_{0}.png",
             "type": "url",
             "port": "3065",
             "protocol": "http",

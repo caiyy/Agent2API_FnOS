@@ -202,6 +202,7 @@ build_one() {
     mkdir -p "${work}/app/bin" "${work}/app/config"
     cp -p "${work}/upstream/agent2api-server" "${work}/app/bin/agent2api-server"
     cp -a "${work}/upstream/ui" "${work}/app/ui"
+    cp -a "${PACKAGE_DIR}/ui/." "${work}/app/ui/"
     cp -p "${ROOT}/LICENSE" "${work}/app/LICENSE"
     cp -a "${ROOT}/licenses" "${work}/app/licenses"
     cp -p "${PACKAGE_DIR}/app-config/agent2api.env.example" \
@@ -241,6 +242,8 @@ EOF
     cp -p "${PACKAGE_DIR}/health.json" "${work}/package/health.json"
     cp -p "${PACKAGE_DIR}/ICON.PNG" "${work}/package/ICON.PNG"
     cp -p "${PACKAGE_DIR}/ICON_256.PNG" "${work}/package/ICON_256.PNG"
+    cp -p "${PACKAGE_DIR}/ui/images/icon_64.png" "${work}/package/ui/images/icon_64.png"
+    cp -p "${PACKAGE_DIR}/ICON_256.PNG" "${work}/package/ui/images/icon_256.png"
     cp -p "${PACKAGE_DIR}/ui/images/64.png" "${work}/package/ui/images/icon-64.png"
     cp -p "${PACKAGE_DIR}/ICON_256.PNG" "${work}/package/ui/images/icon-256.png"
     cp -p "${PACKAGE_DIR}/ICON_256.PNG" "${work}/package/ui/images/256.png"

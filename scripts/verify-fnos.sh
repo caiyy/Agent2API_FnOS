@@ -119,20 +119,29 @@ tar -xzf "${WORK}/app.tgz" -C "${WORK}/app"
     printf 'FAIL: missing upstream license\n' >&2
     exit 1
 }
-[ -f "${WORK}/ui/images/icon-64.png" ] || {
-    printf 'FAIL: missing desktop icon ui/images/icon-64.png\n' >&2
+[ -f "${WORK}/app/ui/config" ] || {
+    printf 'FAIL: app.tgz is missing ui/config\n' >&2
     exit 1
 }
-[ -f "${WORK}/ui/images/icon-256.png" ] || {
-    printf 'FAIL: missing desktop icon ui/images/icon-256.png\n' >&2
+[ -f "${WORK}/app/ui/images/icon_64.png" ] || {
+    printf 'FAIL: app.tgz is missing ui/images/icon_64.png\n' >&2
     exit 1
 }
-file -b "${WORK}/ui/images/icon-64.png" | grep -q '64 x 64' || {
-    printf 'FAIL: ui/images/icon-64.png is not 64x64\n' >&2
+[ -f "${WORK}/app/ui/images/icon_256.png" ] || {
+    printf 'FAIL: app.tgz is missing ui/images/icon_256.png\n' >&2
     exit 1
 }
-file -b "${WORK}/ui/images/icon-256.png" | grep -q '256 x 256' || {
-    printf 'FAIL: ui/images/icon-256.png is not 256x256\n' >&2
+jq -e '.[".url"]["agent2api.Application"].icon == "images/icon_{0}.png"' \
+    "${WORK}/app/ui/config" >/dev/null || {
+    printf 'FAIL: app/ui/config uses the wrong icon template\n' >&2
+    exit 1
+}
+file -b "${WORK}/app/ui/images/icon_64.png" | grep -q '64 x 64' || {
+    printf 'FAIL: app/ui/images/icon_64.png is not 64x64\n' >&2
+    exit 1
+}
+file -b "${WORK}/app/ui/images/icon_256.png" | grep -q '256 x 256' || {
+    printf 'FAIL: app/ui/images/icon_256.png is not 256x256\n' >&2
     exit 1
 }
 file -b "${WORK}/ICON.PNG" | grep -q '64 x 64' || {
