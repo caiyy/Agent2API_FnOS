@@ -16,7 +16,7 @@
 5. 创建标签为 `fnos-v<version>` 的 GitHub Release，并上传安装包。
 
 Release 发布成功后，如果 `Agent2API_FnOS` 仓库配置了
-`FNOS_STORE_DISPATCH_TOKEN`（对 `caiyy/fnos-store` 有仓库 Metadata 读取权限即可），
+`FNOS_STORE_DISPATCH_TOKEN`（对 `caiyy/fnos-store` 有仓库 Contents 读写权限），
 工作流会立即通知商店同步 `apps.json`；未配置时跳过该步骤，由商店的 5 分钟
 轮询兜底。
 
