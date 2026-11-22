@@ -3,6 +3,10 @@
 独立打包仓库：把 Agent2API 官方 Linux 服务端 Release 打包成飞牛 OS 原生
 `.fpk` 应用，不维护也不合并上游源码。
 
+## 站点
+
+GitHub Pages：https://caiyy.github.io/fnos-store/
+
 ## 自动同步
 
 `.github/workflows/sync-upstream.yml` 每 5 分钟检查一次
