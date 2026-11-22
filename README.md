@@ -5,7 +5,7 @@
 
 ## 自动同步
 
-`.github/workflows/sync-upstream.yml` 每 6 小时检查一次
+`.github/workflows/sync-upstream.yml` 每小时检查一次
 `aimod-cc/Agent2API` 的 beta Release。发现新版本且包含 amd64/arm64 官方
 服务端包后，自动：
 
@@ -17,6 +17,25 @@
 
 默认跟踪 beta 通道。切换稳定版时，把工作流中的
 `UPSTREAM_CHANNEL: beta` 改为 `stable`。
+
+## 自动更新边界
+
+打包仓库每小时检查并构建上游 Release，但飞牛应用本身不会在未获授权的情况下
+替换 `/var/apps/agent2api` 下的受管文件。
+
+原因是：
+
+- 飞牛应用中心负责安装、升级、注册表版本和桌面入口，第三方应用直接覆盖文件
+  会造成应用中心显示版本与实际运行版本不一致。
+- `appcenter-cli install-fpk` 在当前飞牛实现中可能走卸载重装路径，不适合作为
+  无人值守的数据保留升级通道。
+- Agent2API 自带的 Docker/systemd 自更新要求固定路径或容器环境，不适用于
+  fnOS 普通应用目录。
+
+当前安全升级方式是下载新 `.fpk` 后在应用中心覆盖安装，`upgrade_init` /
+`upgrade_callback` 会保留应用数据。若后续要启用完全无人值守安装，应增加一个
+独立的受信任特权更新器，并通过飞牛应用中心的数据保留更新 RPC 执行，而不是
+直接覆盖应用文件。
 
 ## 本地构建
 
