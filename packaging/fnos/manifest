@@ -1,5 +1,6 @@
 appname         = agent2api
 version         = __VERSION__
+fpk_version     = __VERSION__
 display_name    = Agent2API
 platform        = __PLATFORM__
 maintainer      = aimod-cc
