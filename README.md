@@ -15,6 +15,11 @@
 4. 生成 `SHA256SUMS`。
 5. 创建标签为 `fnos-v<version>` 的 GitHub Release，并上传安装包。
 
+Release 发布成功后，如果 `Agent2API_FnOS` 仓库配置了
+`FNOS_STORE_DISPATCH_TOKEN`（对 `caiyy/fnos-store` 有仓库 Contents 读写权限），
+工作流会立即通知商店同步 `apps.json`；未配置时跳过该步骤，由商店的 5 分钟
+轮询兜底。
+
 默认跟踪 beta 通道。切换稳定版时，把工作流中的
 `UPSTREAM_CHANNEL: beta` 改为 `stable`。
 

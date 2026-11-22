@@ -37,6 +37,7 @@ jobs:
       UPSTREAM_CHANNEL: beta
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      FNOS_STORE_DISPATCH_TOKEN: ${{ secrets.FNOS_STORE_DISPATCH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -163,3 +164,12 @@ jobs:
           else
             gh release create "${RELEASE_TAG}" "${assets[@]}" "${args[@]}"
           fi
+
+      - name: Notify fnos-store
+        if: steps.existing.outputs.skip != 'true' && env.FNOS_STORE_DISPATCH_TOKEN != ''
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.FNOS_STORE_DISPATCH_TOKEN }}
+          repository: caiyy/fnos-store
+          event-type: agent2api-fnos-release
+          client-payload: '{"version":"${{ steps.package.outputs.version }}","release_tag":"fnos-v${{ steps.package.outputs.version }}"}'
