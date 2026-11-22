@@ -17,6 +17,11 @@ done
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/agent2api-fnos-runtime.XXXXXX")"
 NAME="agent2api-fnos-runtime-$$-${RANDOM}"
 cleanup() {
+    if docker inspect -f '{{.State.Running}}' "${NAME}" 2>/dev/null | grep -q true; then
+        docker exec -u 0 "${NAME}" sh -c \
+            "chown -R $(id -u):$(id -g) /vol1/@appdata/agent2api && \
+             chmod -R u+rwX /vol1/@appdata/agent2api" >/dev/null 2>&1 || true
+    fi
     docker stop "${NAME}" >/dev/null 2>&1 || true
     rm -rf "${WORK}"
 }

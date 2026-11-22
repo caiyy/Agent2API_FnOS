@@ -138,7 +138,8 @@ file_size() {
 
 download_release() {
     local asset="$1"
-    local destination="${CACHE_DIR}/${asset}"
+    local version_cache="${CACHE_DIR}/${UPSTREAM_VERSION}"
+    local destination="${version_cache}/${asset}"
     local checksum_file="${destination}.sha256"
     local url="https://github.com/${UPSTREAM_REPO}/releases/download/v${UPSTREAM_VERSION}/${asset}"
 
@@ -153,7 +154,7 @@ download_release() {
         rm -f "${destination}" "${checksum_file}"
     fi
 
-    mkdir -p "${CACHE_DIR}"
+    mkdir -p "${version_cache}"
     printf 'Downloading %s\n' "${url}"
     curl -fL --retry 5 --retry-delay 3 --retry-all-errors \
         --connect-timeout 30 -o "${destination}.part" "${url}"
@@ -181,7 +182,7 @@ build_one() {
     esac
 
     local asset="agent2api-server-linux-${release_arch}.tar.gz"
-    local archive="${CACHE_DIR}/${asset}"
+    local archive="${CACHE_DIR}/${UPSTREAM_VERSION}/${asset}"
     local work
     work="$(mktemp -d "${TMPDIR:-/tmp}/agent2api-fnos.XXXXXX")"
     WORK_DIRS+=("${work}")
