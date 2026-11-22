@@ -5,7 +5,7 @@
 
 ## 自动同步
 
-`.github/workflows/sync-upstream.yml` 每小时检查一次
+`.github/workflows/sync-upstream.yml` 每 10 分钟检查一次
 `aimod-cc/Agent2API` 的 beta Release。发现新版本且包含 amd64/arm64 官方
 服务端包后，自动：
 
@@ -20,8 +20,9 @@
 
 ## 自动更新边界
 
-打包仓库每小时检查并构建上游 Release，但飞牛应用本身不会在未获授权的情况下
-替换 `/var/apps/agent2api` 下的受管文件。
+打包仓库每 10 分钟检查并构建上游 Release。已经安装 Cocode Store 并开启
+“自动安装更新”的飞牛设备，会每 10 分钟读取更新源，并通过飞牛应用中心的
+数据保留升级 RPC 自动安装新 FPK；关闭该选项后只提示可用更新。
 
 原因是：
 
@@ -32,10 +33,10 @@
 - Agent2API 自带的 Docker/systemd 自更新要求固定路径或容器环境，不适用于
   fnOS 普通应用目录。
 
-当前安全升级方式是下载新 `.fpk` 后在应用中心覆盖安装，`upgrade_init` /
-`upgrade_callback` 会保留应用数据。若后续要启用完全无人值守安装，应增加一个
-独立的受信任特权更新器，并通过飞牛应用中心的数据保留更新 RPC 执行，而不是
-直接覆盖应用文件。
+自动更新由独立特权应用 Cocode Store 执行，不直接覆盖文件。商店会调用飞牛
+应用中心的数据保留升级通道，由 `upgrade_init` / `upgrade_callback` 保留应用
+数据；如果设备不支持该 RPC，商店会拒绝自动更新。也可以继续在应用中心手动
+上传新 `.fpk` 覆盖安装。
 
 ## 本地构建
 
