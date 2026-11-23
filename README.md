@@ -9,7 +9,7 @@ GitHub Pages：https://caiyy.github.io/fnos-store/
 
 ## 自动同步
 
-`.github/workflows/sync-upstream.yml` 每 5 分钟检查一次
+`.github/workflows/sync-upstream.yml` 用两组错开的定时任务检查
 `aimod-cc/Agent2API` 的 beta Release。发现新版本且包含 amd64/arm64 官方
 服务端包后，自动：
 
@@ -29,7 +29,7 @@ Release 发布成功后，如果 `Agent2API_FnOS` 仓库配置了
 
 ## 自动更新边界
 
-打包仓库每 5 分钟检查并构建上游 Release。已经安装 Cocode Store 并开启
+打包仓库通过错开的定时任务检查并构建上游 Release。已经安装 Cocode Store 并开启
 “自动安装更新”的飞牛设备，会每 10 分钟读取更新源，并通过飞牛应用中心的
 数据保留升级 RPC 自动安装新 FPK；关闭该选项后只提示可用更新。
 
@@ -47,9 +47,10 @@ Release 发布成功后，如果 `Agent2API_FnOS` 仓库配置了
 数据；如果设备不支持该 RPC，商店会拒绝自动更新。也可以继续在应用中心手动
 上传新 `.fpk` 覆盖安装。
 
-GitHub Actions 的定时任务最低间隔为 5 分钟，因此这是该平台能实现的接近实时
-轮询上限。要改成真正的事件触发式监控，需要在 `aimod-cc/Agent2API` 仓库配置
-Release webhook，或让上游发布流水线主动向本仓库发送 `repository_dispatch`。
+GitHub Actions 的定时任务最低间隔为 5 分钟，但同一工作流过于频繁的调度可能被
+平台延迟或合并运行。这里用两组错开的定时任务降低单次调度被丢弃的影响；
+真正的实时通知仍需要上游配置 Release webhook，或由上游发布流水线主动发送
+`repository_dispatch`。
 
 ## 本地构建
 
