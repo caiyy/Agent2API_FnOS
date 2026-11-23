@@ -40,7 +40,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       FNOS_STORE_DISPATCH_TOKEN: ${{ secrets.FNOS_STORE_DISPATCH_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Resolve upstream release
         id: upstream
@@ -116,7 +116,7 @@ jobs:
 
       - name: Upload workflow artifacts
         if: steps.existing.outputs.skip != 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: agent2api-fnos-${{ steps.package.outputs.version }}
           path: |
@@ -168,7 +168,7 @@ jobs:
 
       - name: Notify fnos-store
         if: steps.existing.outputs.skip != 'true' && env.FNOS_STORE_DISPATCH_TOKEN != ''
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@v4
         with:
           token: ${{ secrets.FNOS_STORE_DISPATCH_TOKEN }}
           repository: caiyy/fnos-store
